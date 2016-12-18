@@ -161,7 +161,7 @@ class Chatbot:
                 vocab_size, layer1_size = map(int, header.split())
                 binary_len = np.dtype('float32').itemsize * layer1_size
                 initW = np.random.uniform(-0.25,0.25,(len(self.textData.word2id), layer1_size))
-                for line in tqdm(range(1000)):
+                for line in tqdm(range(vocab_size)):
                     word = []
                     while True:
                         ch = f.read(1)

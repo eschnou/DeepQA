@@ -113,7 +113,7 @@ class Chatbot:
         nnArgs = parser.add_argument_group('Network options', 'architecture related option')
         nnArgs.add_argument('--hiddenSize', type=int, default=256, help='number of hidden units in each RNN cell')
         nnArgs.add_argument('--numLayers', type=int, default=2, help='number of rnn layers')
-        nnArgs.add_argument('--embeddingSize', type=int, default=300, help='embedding size of the word representation')
+        nnArgs.add_argument('--embeddingSize', type=int, default=32, help='embedding size of the word representation')
         nnArgs.add_argument('--softmaxSamples', type=int, default=0, help='Number of samples in the sampled softmax loss function. A value of 0 deactivates sampled softmax')
 
         # Training options
@@ -156,7 +156,7 @@ class Chatbot:
 
         # Load word2vec to initialize the embeddings
         print("Loading pre-trained embeddings from GoogleNews-vectors-negative300.bin")
-        with open("D:\\Projects\\NLP\\GoogleNews-vectors-negative300.bin", "rb", 0) as f:
+        with open(os.path.join(self.args.rootDir, 'data/word2vec/GoogleNews-vectors-negative300.bin'), "rb", 0) as f:
                 header = f.readline()
                 vocab_size, layer1_size = map(int, header.split())
                 binary_len = np.dtype('float32').itemsize * layer1_size
@@ -174,6 +174,12 @@ class Chatbot:
                         initW[self.textData.word2id[word]] = np.fromstring(f.read(binary_len), dtype='float32')
                     else:
                         f.read(binary_len)
+
+        # PCA Decomposition to reduce dimensionality
+        U, s, Vt = np.linalg.svd(initW, full_matrices=False)
+        S = np.zeros((300, 300), dtype=complex)
+        S[:300, :300] = np.diag(s)
+        B = np.dot(U[:, :32], S[:32, :32])
 
         # Prepare the model
         with tf.device(self.getDevice()):
@@ -196,7 +202,11 @@ class Chatbot:
 
         print('Initialize variables...')
         self.sess.run(tf.initialize_all_variables())
-        self.sess.run(embeddings.assign(initW))
+
+        # Initialize embeddings
+        with tf.variable_scope("embedding_rnn_seq2seq/RNN/EmbeddingWrapper", reuse=True):
+            em = tf.get_variable("embedding")
+            self.sess.run(em.assign(B))
 
         # Reload the model eventually (if it exist.), on testing mode, the models are not loaded here (but in predictTestset)
         if self.args.test != Chatbot.TestMode.ALL:

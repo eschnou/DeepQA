@@ -25,6 +25,7 @@ import datetime  # Chronometer
 import os  # Files management
 from tqdm import tqdm  # Progress bar
 import tensorflow as tf
+import numpy as np
 
 from chatbot.textdata import TextData
 from chatbot.model import Model
@@ -112,7 +113,7 @@ class Chatbot:
         nnArgs = parser.add_argument_group('Network options', 'architecture related option')
         nnArgs.add_argument('--hiddenSize', type=int, default=256, help='number of hidden units in each RNN cell')
         nnArgs.add_argument('--numLayers', type=int, default=2, help='number of rnn layers')
-        nnArgs.add_argument('--embeddingSize', type=int, default=32, help='embedding size of the word representation')
+        nnArgs.add_argument('--embeddingSize', type=int, default=300, help='embedding size of the word representation')
         nnArgs.add_argument('--softmaxSamples', type=int, default=0, help='Number of samples in the sampled softmax loss function. A value of 0 deactivates sampled softmax')
 
         # Training options
@@ -153,6 +154,28 @@ class Chatbot:
             print('Dataset created! Thanks for using this program')
             return  # No need to go further
 
+        # Load word2vec to initialize the embeddings
+        print("Loading pre-trained embeddings from GoogleNews-vectors-negative300.bin")
+        with open("D:\\Projects\\NLP\\GoogleNews-vectors-negative300.bin", "rb", 0) as f:
+                header = f.readline()
+                vocab_size, layer1_size = map(int, header.split())
+                binary_len = np.dtype('float32').itemsize * layer1_size
+                initW = np.random.uniform(-0.25,0.25,(len(self.textData.word2id), layer1_size))
+                for line in tqdm(range(1000)):
+                    word = []
+                    while True:
+                        ch = f.read(1)
+                        if ch == b' ':
+                            word = b''.join(word).decode('utf-8')
+                            break
+                        if ch != b'\n':
+                            word.append(ch)
+                    if word in self.textData.word2id:
+                        initW[self.textData.word2id[word]] = np.fromstring(f.read(binary_len), dtype='float32')
+                    else:
+                        f.read(binary_len)
+
+        # Prepare the model
         with tf.device(self.getDevice()):
             self.model = Model(self.args, self.textData)
 
@@ -169,11 +192,11 @@ class Chatbot:
         # Also fix seed for random.shuffle (does it works globally for all files ?)
 
         # Running session
-
         self.sess = tf.Session()  # TODO: Replace all sess by self.sess (not necessary a good idea) ?
 
         print('Initialize variables...')
         self.sess.run(tf.initialize_all_variables())
+        self.sess.run(embeddings.assign(initW))
 
         # Reload the model eventually (if it exist.), on testing mode, the models are not loaded here (but in predictTestset)
         if self.args.test != Chatbot.TestMode.ALL:

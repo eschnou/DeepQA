@@ -16,4 +16,12 @@ with open(os.path.join(os.getcwd() , 'data/samples/dataset-10.pkl'), 'rb') as ha
     eosToken = word2id["<eos>"]
     unknownToken = word2id["<unknown>"]  # Restore special words
 
-print(id2word[27])
+qmark = word2id['?']
+prefixes = list(map(lambda x: word2id[x], ("what", "how", "when", "why", "where", "do", "did", "is", "are", "can", "could", "would", "will")))
+filteredSamples = []
+
+for sample in trainingSamples:
+    if sample[0][-1] == qmark and sample[0][0] in prefixes:
+        filteredSamples.append(sample)
+
+print(len(filteredSamples))

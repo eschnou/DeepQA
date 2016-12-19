@@ -23,9 +23,11 @@ import argparse  # Command line parsing
 import configparser  # Saving the models parameters
 import datetime  # Chronometer
 import os  # Files management
-from tqdm import tqdm  # Progress bar
+import math
 import tensorflow as tf
 import numpy as np
+
+from tqdm import tqdm  # Progress bar
 
 from chatbot.textdata import TextData
 from chatbot.model import Model
@@ -161,7 +163,7 @@ class Chatbot:
                 vocab_size, layer1_size = map(int, header.split())
                 binary_len = np.dtype('float32').itemsize * layer1_size
                 initW = np.random.uniform(-0.25,0.25,(len(self.textData.word2id), layer1_size))
-                for line in tqdm(range(vocab_size)):
+                for line in tqdm(range(1000)):
                     word = []
                     while True:
                         ch = f.read(1)
@@ -175,7 +177,7 @@ class Chatbot:
                     else:
                         f.read(binary_len)
 
-        # PCA Decomposition to reduce dimensionality
+        # PCA Decomposition to reduce word2vec dimensionality
         U, s, Vt = np.linalg.svd(initW, full_matrices=False)
         S = np.zeros((300, 300), dtype=complex)
         S[:300, :300] = np.diag(s)
@@ -203,10 +205,21 @@ class Chatbot:
         print('Initialize variables...')
         self.sess.run(tf.initialize_all_variables())
 
-        # Initialize embeddings
+        # Initialize input embeddings
+
         with tf.variable_scope("embedding_rnn_seq2seq/RNN/EmbeddingWrapper", reuse=True):
-            em = tf.get_variable("embedding")
-            self.sess.run(em.assign(B))
+            em_in = tf.get_variable("embedding")
+            self.sess.run(em_in.assign(B))
+
+        # Initialize output embeddings
+        with tf.variable_scope("embedding_rnn_seq2seq/embedding_rnn_decoder", reuse=True):
+            em_out = tf.get_variable("embedding")
+            self.sess.run(em_out.assign(B))
+
+        # Disable training for embeddings
+        variables = tf.get_collection_ref(tf.GraphKeys.TRAINABLE_VARIABLES)
+        variables.remove(em_in)
+        variables.remove(em_out)
 
         # Reload the model eventually (if it exist.), on testing mode, the models are not loaded here (but in predictTestset)
         if self.args.test != Chatbot.TestMode.ALL:
@@ -266,6 +279,11 @@ class Chatbot:
                     _, loss, summary = sess.run(ops + (mergedSummaries,), feedDict)
                     self.writer.add_summary(summary, self.globStep)
                     self.globStep += 1
+
+                    # Output training status
+                    if self.globStep % 100 == 0:
+                        perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
+                        tqdm.write("----- Epoch %d -- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.args.numEpochs, self.globStep, loss, perplexity))
 
                     # Checkpoint
                     if self.globStep % self.args.saveEvery == 0:

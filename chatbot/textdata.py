@@ -253,6 +253,16 @@ class TextData:
             self.eosToken = self.word2id["<eos>"]
             self.unknownToken = self.word2id["<unknown>"]  # Restore special words
 
+            qmark = self.word2id['?']
+            prefixes = list(map(lambda x: self.word2id[x], ("what", "how", "when", "why", "where", "do", "did", "is", "are", "can", "could", "would", "will")))
+            filteredSamples = []
+
+            for sample in self.trainingSamples:
+                if sample[0][-1] == qmark and sample[0][0] in prefixes:
+                    filteredSamples.append(sample)
+
+            self.trainingSamples = filteredSamples
+
     def createCorpus(self, conversations):
         """Extract all data from the given vocabulary
         """

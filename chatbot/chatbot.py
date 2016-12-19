@@ -163,7 +163,7 @@ class Chatbot:
                 vocab_size, layer1_size = map(int, header.split())
                 binary_len = np.dtype('float32').itemsize * layer1_size
                 initW = np.random.uniform(-0.25,0.25,(len(self.textData.word2id), layer1_size))
-                for line in tqdm(range(1000)):
+                for line in tqdm(range(vocab_size)):
                     word = []
                     while True:
                         ch = f.read(1)
@@ -178,10 +178,11 @@ class Chatbot:
                         f.read(binary_len)
 
         # PCA Decomposition to reduce word2vec dimensionality
-        U, s, Vt = np.linalg.svd(initW, full_matrices=False)
-        S = np.zeros((300, 300), dtype=complex)
-        S[:300, :300] = np.diag(s)
-        B = np.dot(U[:, :32], S[:32, :32])
+        if self.args.embeddingSize < layer1_size:
+            U, s, Vt = np.linalg.svd(initW, full_matrices=False)
+            S = np.zeros((layer1_size, layer1_size), dtype=complex)
+            S[:layer1_size, :layer1_size] = np.diag(s)
+            initW = np.dot(U[:, :self.args.embeddingSize], S[:self.args.embeddingSize, :self.args.embeddingSize])
 
         # Prepare the model
         with tf.device(self.getDevice()):
@@ -206,15 +207,14 @@ class Chatbot:
         self.sess.run(tf.initialize_all_variables())
 
         # Initialize input embeddings
-
         with tf.variable_scope("embedding_rnn_seq2seq/RNN/EmbeddingWrapper", reuse=True):
             em_in = tf.get_variable("embedding")
-            self.sess.run(em_in.assign(B))
+            self.sess.run(em_in.assign(initW))
 
         # Initialize output embeddings
         with tf.variable_scope("embedding_rnn_seq2seq/embedding_rnn_decoder", reuse=True):
             em_out = tf.get_variable("embedding")
-            self.sess.run(em_out.assign(B))
+            self.sess.run(em_out.assign(initW))
 
         # Disable training for embeddings
         variables = tf.get_collection_ref(tf.GraphKeys.TRAINABLE_VARIABLES)
@@ -283,7 +283,7 @@ class Chatbot:
                     # Output training status
                     if self.globStep % 100 == 0:
                         perplexity = math.exp(float(loss)) if loss < 300 else float("inf")
-                        tqdm.write("----- Epoch %d -- Step %d -- Loss %.2f -- Perplexity %.2f" % (self.args.numEpochs, self.globStep, loss, perplexity))
+                        tqdm.write("----- Epoch %d -- Step %d -- Loss %.2f -- Perplexity %.2f" % (e, self.globStep, loss, perplexity))
 
                     # Checkpoint
                     if self.globStep % self.args.saveEvery == 0:

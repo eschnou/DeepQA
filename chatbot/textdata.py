@@ -26,7 +26,7 @@ import os  # Checking file existance
 import random
 
 from chatbot.cornelldata import CornellData
-
+from chatbot.opensubsdata import OpensubsData
 
 class Batch:
     """Struct containing batches info
@@ -52,7 +52,7 @@ class TextData:
         self.args = args
 
         # Path variables
-        self.corpusDir = os.path.join(self.args.rootDir, 'data/cornell/')
+        self.corpusDir = os.path.join(self.args.rootDir, 'data', self.args.corpus)
         self.samplesDir = os.path.join(self.args.rootDir, 'data/samples/')
         self.samplesName = self._constructName()
 
@@ -209,12 +209,15 @@ class TextData:
             datasetExist = True
 
         if not datasetExist:  # First time we load the database: creating all files
-            print("Dataset not found, please create one first.")
-            exit(0)
-            #print('Training samples not found. Creating dataset...')
+            print('Training samples not found. Creating dataset...')
             # Corpus creation
-            #cornellData = CornellData(self.corpusDir)
-            #self.createCorpus(cornellData.getConversations())
+
+            if self.args.corpus == 'cornell':
+                cornellData = CornellData(self.corpusDir)
+                self.createCorpus(cornellData.getConversations())
+            elif self.args.corpus == 'opensubs':
+                opensubsData = OpensubsData(self.corpusDir)
+                self.createCorpus(opensubsData.getConversations())
 
             # Saving
             #print('Saving dataset...')

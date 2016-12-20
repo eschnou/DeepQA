@@ -211,7 +211,6 @@ class TextData:
         if not datasetExist:  # First time we load the database: creating all files
             print('Training samples not found. Creating dataset...')
             # Corpus creation
-
             if self.args.corpus == 'cornell':
                 cornellData = CornellData(self.corpusDir)
                 self.createCorpus(cornellData.getConversations())
@@ -220,13 +219,13 @@ class TextData:
                 self.createCorpus(opensubsData.getConversations())
 
             # Saving
-            #print('Saving dataset...')
-            #self.saveDataset(dirName)  # Saving tf samples
+            print('Saving dataset...')
+            self.saveDataset(dirName)  # Saving tf samples
         else:
             print('Loading dataset from {}...'.format(dirName))
             self.loadDataset(dirName)
 
-        #assert self.padToken == 0
+        assert self.padToken == 0
 
     def saveDataset(self, dirName):
         """Save samples to file
@@ -253,20 +252,10 @@ class TextData:
             self.id2word = data["id2word"]
             self.trainingSamples = data["trainingSamples"]
 
-            self.padToken = self.getWordId("<pad>")
-            self.goToken = self.getWordId("<go>")
-            self.eosToken = self.getWordId("<eos>")
-            self.unknownToken = self.getWordId("<unknown>") # Restore special words
-
-            qmark = self.word2id['?']
-            prefixes = list(map(lambda x: self.word2id[x], ("what", "how", "when", "why", "where", "do", "did", "is", "are", "can", "could", "would", "will")))
-            filteredSamples = []
-
-            for sample in self.trainingSamples:
-                if len(sample[0]) <= self.args.maxLength and len(sample[1]) <= self.args.maxLength and sample[0][-1] == qmark and sample[0][0] in prefixes:
-                        filteredSamples.append(sample)
-
-            self.trainingSamples = filteredSamples
+            self.padToken = self.word2id["<pad>"]
+            self.goToken = self.word2id["<go>"]
+            self.eosToken = self.word2id["<eos>"]
+            self.unknownToken = self.word2id["<unknown>"]  # Restore special words
 
     def createCorpus(self, conversations):
         """Extract all data from the given vocabulary

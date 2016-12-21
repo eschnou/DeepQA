@@ -23,7 +23,6 @@ import argparse  # Command line parsing
 import configparser  # Saving the models parameters
 import datetime  # Chronometer
 import os  # Files management
-import math
 import tensorflow as tf
 import numpy as np
 
@@ -54,7 +53,6 @@ class Chatbot:
         # Task specific object
         self.textData = None  # Dataset
         self.model = None  # Sequence to sequence model
-        self.restored = False # Has the model been restored from checkpoint
 
         # Tensorflow utilities for convenience saving/logging
         self.writer = None
@@ -98,7 +96,7 @@ class Chatbot:
         globalArgs.add_argument('--playDataset', type=int, nargs='?', const=10, default=None,  help='if set, the program  will randomly play some samples(can be use conjointly with createDataset if this is the only action you want to perform)')
         globalArgs.add_argument('--reset', action='store_true', help='use this if you want to ignore the previous model present on the model directory (Warning: the model will be destroyed with all the folder content)')
         globalArgs.add_argument('--verbose', action='store_true', help='When testing, will plot the outputs at the same time they are computed')
-        globalArgs.add_argument('--keepAll', action='store_true', help='If this option is set, all saved model will be keep (Warning: make sure you have enough free disk space or increase saveEvery)')  # TODO: Add an option to delimit the max size
+        globalArgs.add_argument('--keepAll', action='store_true', help='If this option is set, all saved model will be kept (Warning: make sure you have enough free disk space or increase saveEvery)')  # TODO: Add an option to delimit the max size
         globalArgs.add_argument('--modelTag', type=str, default=None, help='tag to differentiate which model to store/load')
         globalArgs.add_argument('--rootDir', type=str, default=None, help='folder where to look for the models and data')
         globalArgs.add_argument('--watsonMode', action='store_true', help='Inverse the questions and answer when training (the network try to guess the question)')
@@ -107,7 +105,7 @@ class Chatbot:
 
         # Dataset options
         datasetArgs = parser.add_argument_group('Dataset options')
-        datasetArgs.add_argument('--corpus', type=str, default='cornell', help='corpus on which extract the dataset. Only two corpus available right now (cornell and opensubs)')
+        datasetArgs.add_argument('--corpus', choices=['cornell', 'opensubs'], default='cornell', help='corpus on which extract the dataset. Only two corpus available right now (cornell and opensubs)')  # TODO: Replace by cst registered in textdata
         datasetArgs.add_argument('--datasetTag', type=str, default=None, help='add a tag to the dataset (file where to load the vocabulary and the precomputed samples, not the original corpus). Useful to manage multiple versions')  # The samples are computed from the corpus if it does not exist already. There are saved in \'data/samples/\'
         datasetArgs.add_argument('--ratioDataset', type=float, default=1.0, help='ratio of dataset used to avoid using the whole dataset')  # Not implemented, useless ?
         datasetArgs.add_argument('--maxLength', type=int, default=10, help='maximum length of the sentence (for input and output), define number of maximum step of the RNN')
@@ -175,7 +173,10 @@ class Chatbot:
         # Also fix seed for random.shuffle (does it works globally for all files ?)
 
         # Running session
-        self.sess = tf.Session()  # TODO: Replace all sess by self.sess (not necessary a good idea) ?
+        self.sess = tf.Session(config=tf.ConfigProto(
+            allow_soft_placement=True,  # Allows backup device for non GPU-available operations (when forcing GPU)
+            log_device_placement=False)  # Too verbose ?
+        )  # TODO: Replace all sess by self.sess (not necessary a good idea) ?
 
         print('Initialize variables...')
         self.sess.run(tf.initialize_all_variables())
@@ -187,48 +188,9 @@ class Chatbot:
         # Initialize embeddings with pre-trained word2vec vectors unless we are opening
         # a restored model, in which case the embeddings were saved as part of the
         # checkpoint.
-        if self.args.initEmbeddings and not self.restored:
+        if self.args.initEmbeddings and self.globStep == 0:
             print("Loading pre-trained embeddings from GoogleNews-vectors-negative300.bin")
-            with open(os.path.join(self.args.rootDir, 'data/word2vec/GoogleNews-vectors-negative300.bin'), "rb", 0) as f:
-                    header = f.readline()
-                    vocab_size, vector_size = map(int, header.split())
-                    binary_len = np.dtype('float32').itemsize * vector_size
-                    initW = np.random.uniform(-0.25,0.25,(len(self.textData.word2id), vector_size))
-                    for line in tqdm(range(vocab_size)):
-                        word = []
-                        while True:
-                            ch = f.read(1)
-                            if ch == b' ':
-                                word = b''.join(word).decode('utf-8')
-                                break
-                            if ch != b'\n':
-                                word.append(ch)
-                        if word in self.textData.word2id:
-                            initW[self.textData.word2id[word]] = np.fromstring(f.read(binary_len), dtype='float32')
-                        else:
-                            f.read(binary_len)
-
-            # PCA Decomposition to reduce word2vec dimensionality
-            if self.args.embeddingSize < vector_size:
-                U, s, Vt = np.linalg.svd(initW, full_matrices=False)
-                S = np.zeros((vector_size, vector_size), dtype=complex)
-                S[:vector_size, :vector_size] = np.diag(s)
-                initW = np.dot(U[:, :self.args.embeddingSize], S[:self.args.embeddingSize, :self.args.embeddingSize])
-
-            # Initialize input embeddings
-            with tf.variable_scope("embedding_rnn_seq2seq/RNN/EmbeddingWrapper", reuse=True):
-                em_in = tf.get_variable("embedding")
-                self.sess.run(em_in.assign(initW))
-
-            # Initialize output embeddings
-            with tf.variable_scope("embedding_rnn_seq2seq/embedding_rnn_decoder", reuse=True):
-                em_out = tf.get_variable("embedding")
-                self.sess.run(em_out.assign(initW))
-
-            # Disable training for embeddings
-            variables = tf.get_collection_ref(tf.GraphKeys.TRAINABLE_VARIABLES)
-            variables.remove(em_in)
-            variables.remove(em_out)
+            self.loadEmbedding(self.sess)
 
         if self.args.test:
             if self.args.test == Chatbot.TestMode.INTERACTIVE:
@@ -415,6 +377,52 @@ class Chatbot:
         self.sess.close()
         print('Daemon closed.')
 
+    def loadEmbedding(self, sess):
+        """ Initialize embeddings with pre-trained word2vec vectors
+        Will modify the embedding weights of the current loaded model
+        Uses the GoogleNews pre-trained values (path hardcoded)
+        """
+        with open(os.path.join(self.args.rootDir, 'data/word2vec/GoogleNews-vectors-negative300.bin'), "rb", 0) as f:
+            header = f.readline()
+            vocab_size, vector_size = map(int, header.split())
+            binary_len = np.dtype('float32').itemsize * vector_size
+            initW = np.random.uniform(-0.25,0.25,(len(self.textData.word2id), vector_size))
+            for line in tqdm(range(vocab_size)):
+                word = []
+                while True:
+                    ch = f.read(1)
+                    if ch == b' ':
+                        word = b''.join(word).decode('utf-8')
+                        break
+                    if ch != b'\n':
+                        word.append(ch)
+                if word in self.textData.word2id:
+                    initW[self.textData.word2id[word]] = np.fromstring(f.read(binary_len), dtype='float32')
+                else:
+                    f.read(binary_len)
+
+        # PCA Decomposition to reduce word2vec dimensionality
+        if self.args.embeddingSize < vector_size:
+            U, s, Vt = np.linalg.svd(initW, full_matrices=False)
+            S = np.zeros((vector_size, vector_size), dtype=complex)
+            S[:vector_size, :vector_size] = np.diag(s)
+            initW = np.dot(U[:, :self.args.embeddingSize], S[:self.args.embeddingSize, :self.args.embeddingSize])
+
+        # Initialize input embeddings
+        with tf.variable_scope("embedding_rnn_seq2seq/RNN/EmbeddingWrapper", reuse=True):
+            em_in = tf.get_variable("embedding")
+            sess.run(em_in.assign(initW))
+
+        # Initialize output embeddings
+        with tf.variable_scope("embedding_rnn_seq2seq/embedding_rnn_decoder", reuse=True):
+            em_out = tf.get_variable("embedding")
+            sess.run(em_out.assign(initW))
+
+        # Disable training for embeddings
+        variables = tf.get_collection_ref(tf.GraphKeys.TRAINABLE_VARIABLES)
+        variables.remove(em_in)
+        variables.remove(em_out)
+
     def managePreviousModel(self, sess):
         """ Restore or reset the model, depending of the parameters
         If the destination directory already contains some file, it will handle the conflict as following:
@@ -441,8 +449,6 @@ class Chatbot:
             elif os.path.exists(modelName):  # Restore the model
                 print('Restoring previous model from {}'.format(modelName))
                 self.saver.restore(sess, modelName)  # Will crash when --reset is not activated and the model has not been saved yet
-                self.restored = True
-                print('Model restored.')
             elif self._getModelList():
                 print('Conflict with previous models.')
                 raise RuntimeError('Some models are already present in \'{}\'. You should check them first (or re-try with the keepAll flag)'.format(self.modelDir))
@@ -503,6 +509,7 @@ class Chatbot:
             self.globStep = config['General'].getint('globStep')
             self.args.maxLength = config['General'].getint('maxLength')  # We need to restore the model length because of the textData associated and the vocabulary size (TODO: Compatibility mode between different maxLength)
             self.args.watsonMode = config['General'].getboolean('watsonMode')
+            self.args.corpus = config['General'].get('corpus')
             #self.args.datasetTag = config['General'].get('datasetTag')
 
             self.args.hiddenSize = config['Network'].getint('hiddenSize')
@@ -519,6 +526,7 @@ class Chatbot:
             print('globStep: {}'.format(self.globStep))
             print('maxLength: {}'.format(self.args.maxLength))
             print('watsonMode: {}'.format(self.args.watsonMode))
+            print('corpus: {}'.format(self.args.corpus))
             print('hiddenSize: {}'.format(self.args.hiddenSize))
             print('numLayers: {}'.format(self.args.numLayers))
             print('embeddingSize: {}'.format(self.args.embeddingSize))
@@ -544,6 +552,7 @@ class Chatbot:
         config['General']['globStep']  = str(self.globStep)
         config['General']['maxLength'] = str(self.args.maxLength)
         config['General']['watsonMode'] = str(self.args.watsonMode)
+        config['General']['corpus'] = str(self.args.corpus)
 
         config['Network'] = {}
         config['Network']['hiddenSize'] = str(self.args.hiddenSize)

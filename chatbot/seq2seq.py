@@ -24,48 +24,13 @@ def custom_rnn_seq2seq(encoder_inputs,
                        embedding_size,
                        output_projection=None,
                        feed_previous=False,
-                       dtype=None,):
-  """Embedding RNN sequence-to-sequence model.
-
-  This model first embeds encoder_inputs by a newly created embedding (of shape
-  [num_encoder_symbols x input_size]). Then it runs an RNN to encode
-  embedded encoder_inputs into a state vector. Next, it embeds decoder_inputs
-  by another newly created embedding (of shape [num_decoder_symbols x
-  input_size]). Then it runs RNN decoder, initialized with the last
-  encoder state, on embedded decoder_inputs.
-
-  Args:
-    encoder_inputs: A list of 1D int32 Tensors of shape [batch_size].
-    decoder_inputs: A list of 1D int32 Tensors of shape [batch_size].
-    cell: rnn_cell.RNNCell defining the cell function and size.
-    num_encoder_symbols: Integer; number of symbols on the encoder side.
-    num_decoder_symbols: Integer; number of symbols on the decoder side.
-    embedding_size: Integer, the length of the embedding vector for each symbol.
-    output_projection: None or a pair (W, B) of output projection weights and
-      biases; W has shape [output_size x num_decoder_symbols] and B has
-      shape [num_decoder_symbols]; if provided and feed_previous=True, each
-      fed previous output will first be multiplied by W and added B.
-    feed_previous: Boolean or scalar Boolean Tensor; if True, only the first
-      of decoder_inputs will be used (the "GO" symbol), and all other decoder
-      inputs will be taken from previous outputs (as in embedding_rnn_decoder).
-      If False, decoder_inputs are used as given (the standard decoder case).
-    dtype: The dtype of the initial state for both the encoder and encoder
-      rnn cells (default: tf.float32).
-    scope: VariableScope for the created subgraph; defaults to
-      "embedding_rnn_seq2seq"
-
-  Returns:
-    A tuple of the form (outputs, state), where:
-      outputs: A list of the same length as decoder_inputs of 2D Tensors. The
-        output is of shape [batch_size x cell.output_size] when
-        output_projection is not None (and represents the dense representation
-        of predicted tokens). It is of shape [batch_size x num_decoder_symbols]
-        when output_projection is None.
-      state: The state of each decoder cell in each time-step. This is a list
-        with length len(decoder_inputs) -- one item for each time-step.
-        It is a 2D Tensor of shape [batch_size x cell.state_size].
+                       thought_map=True,
+                       dtype=None):
   """
-  with tf.variable_scope("custom_rnn_seq2seq") as scope:
+  Experimenting with the concept of thought mapping
+  """
+  # First we define the encoder part
+  with tf.variable_scope("thought_encoder") as scope:
     if dtype is not None:
       scope.set_dtype(dtype)
     else:
@@ -81,26 +46,11 @@ def custom_rnn_seq2seq(encoder_inputs,
     if output_projection is None:
       cell = tf.nn.rnn_cell.OutputProjectionWrapper(cell, num_decoder_symbols)
 
-  # The following is an intermediate layer whose role is to map a question 'thought'
-  # to an answer thought. In the future, this layer can also use additional inputs
-  # for example to take into account the context of the question, or to access something
-  # like a memory.
-  with tf.variable_scope("thought_mapper") as scope:
-      decoder_state = []
-      hidden_size = encoder_state[0].c.get_shape()[1].value
-      batch_size = len(encoder_inputs)
+  # Insert a thought map between encoder and decoder
+  decoder_initial_state = thought_mapper(encoder_state) if thought_map else encoder_state
 
-      for i in range (len(encoder_state)):
-          state = encoder_state[i]
-          Wc = tf.get_variable("Wc%d" % i, initializer = tf.convert_to_tensor(np.eye(hidden_size), dtype=tf.float32), trainable=False)
-          bc = tf.get_variable("bc%d" %i,  initializer = tf.zeros([hidden_size]), dtype=tf.float32, trainable=False)
-          Wh = tf.get_variable("Wh%d" % i, initializer = tf.convert_to_tensor(np.eye(hidden_size), dtype=tf.float32), trainable=False)
-          bh = tf.get_variable("bh%d" %i,  initializer = tf.zeros([hidden_size]),  dtype=tf.float32, trainable=False)
-          c = tf.map_fn(lambda x: tf.squeeze(tf.matmul(tf.reshape(x, [-1, hidden_size]), Wc) + bc), state.c)
-          h = tf.map_fn(lambda x: tf.squeeze(tf.matmul(tf.reshape(x, [-1, hidden_size]), Wh) + bh), state.h)
-          decoder_state.append(tf.nn.rnn_cell.LSTMStateTuple(c, h))
-
-  with tf.variable_scope("embedding_rnn_decoder") as scope:
+  # Build the decoder
+  with tf.variable_scope("thought_decoder") as scope:
 
     if output_projection is not None:
       dtype = scope.dtype
@@ -111,11 +61,79 @@ def custom_rnn_seq2seq(encoder_inputs,
 
     embedding = tf.get_variable("embedding", [num_decoder_symbols, embedding_size])
 
-    loop_function = tf.nn.seq2seq_extract_argmax_and_embed(
+    loop_function = tf.nn.seq2seq._extract_argmax_and_embed(
         embedding, output_projection,
-        update_embedding_for_previous) if feed_previous else None
+        update_embedding=False) if feed_previous else None
 
     emb_inp = (
         tf.nn.embedding_ops.embedding_lookup(embedding, i) for i in decoder_inputs)
 
-    return tf.nn.seq2seq.rnn_decoder(emb_inp, decoder_state, cell, loop_function=loop_function)
+    return tf.nn.seq2seq.rnn_decoder(emb_inp, decoder_initial_state, cell, loop_function=loop_function)
+
+def thought_mapper(encoder_state, thoughtmap_layers=1, thoughtmap_layer_size=1024):
+      """The following is an intermediate layer whose role is to map a question 'thought'
+         to an answer thought. In the future, this layer can also use additional inputs
+         for example to take into account the context of the question, or to access something
+         like a memory.
+      """
+
+      with tf.variable_scope("thought_mapper", initializer=xavier_weight_init()) as scope:
+
+          thought_vector = []
+          decoder_initial_state = []
+          num_layers = len(encoder_state)
+          hidden_size = encoder_state[0].c.get_shape()[1].value
+          thought_size = num_layers * hidden_size * 2
+
+          # Collect all internal states vector and flatten a single thought vector t with size numLayers * hiddenSize
+          for i in range (len(encoder_state)):
+              state = encoder_state[i]
+              thought_vector.append(tf.concat(1, [state.c, state.h]))
+          thought_vector = tf.concat(1, thought_vector)
+
+          # Add a hidden layer to map between the question thought to answer thought
+          W1 = tf.get_variable("W1", [thought_size, thought_size])
+          W2 = tf.get_variable("W2", [thought_size, thought_size])
+          b1 = tf.get_variable("b1", [thought_size])
+          b2 = tf.get_variable("b2", [thought_size])
+
+          layer_1 = tf.map_fn(lambda x: tf.squeeze(tf.tanh(tf.matmul(tf.reshape(x, [-1, thought_size]), W1) + b1)), thought_vector)
+          layer_2 = tf.map_fn(lambda x: tf.squeeze(tf.tanh(tf.matmul(tf.reshape(x, [-1, thought_size]), W2) + b2)), layer_1)
+
+          # Re-split the question thought vector to create the decoder state
+          for layer in tf.split(1, num_layers, layer_1):
+              c, h = tf.split(1, 2, layer)
+              decoder_initial_state.append(tf.nn.rnn_cell.LSTMStateTuple(c, h))
+
+          return decoder_initial_state
+
+
+def xavier_weight_init():
+   """
+   Returns function that creates random tensor.
+
+   The specified function will take in a shape (tuple or 1-d array) and must
+   return a random tensor of the specified shape and must be drawn from the
+   Xavier initialization distribution.
+   """
+   def _xavier_initializer(shape, **kwargs):
+     """Defines an initializer for the Xavier distribution.
+
+     This function will be used as a variable scope initializer.
+     https://www.tensorflow.org/versions/r0.7/how_tos/variable_scope/index.html#initializers-in-variable-scope
+
+     Args:
+       shape: Tuple or 1-d array that species dimensions of requested tensor.
+     Returns:
+       out: tf.Tensor of specified shape sampled from Xavier distribution.
+     """
+
+     m = shape[0]
+     n = shape[1] if len(shape) > 1 else shape[0]
+
+     bound = np.sqrt(6) / np.sqrt(m + n)
+     out = tf.random_uniform(shape, minval=-bound, maxval=bound)
+
+     return out
+   # Returns defined initializer function.
+   return _xavier_initializer

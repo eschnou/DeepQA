@@ -77,7 +77,7 @@ def thought_mapper(encoder_state, thoughtmap_layers=1, thoughtmap_layer_size=102
          like a memory.
       """
 
-      with tf.variable_scope("thought_mapper", initializer=xavier_weight_init()) as scope: 
+      with tf.variable_scope("thought_mapper", initializer=xavier_weight_init()) as scope:
 
           thought_vector = []
           decoder_initial_state = []
@@ -93,15 +93,15 @@ def thought_mapper(encoder_state, thoughtmap_layers=1, thoughtmap_layer_size=102
 
           # Add a hidden layer to map between the question thought to answer thought
           W1 = tf.get_variable("W1", [thought_size, thought_size])
-          #W2 = tf.get_variable("W2", [thought_size, thought_size])
+          W2 = tf.get_variable("W2", [thought_size, thought_size])
           b1 = tf.get_variable("b1", [thought_size])
-          #b2 = tf.get_variable("b2", [thought_size])
+          b2 = tf.get_variable("b2", [thought_size])
 
           layer_1 = tf.map_fn(lambda x: tf.squeeze(tf.tanh(tf.matmul(tf.reshape(x, [-1, thought_size]), W1) + b1)), thought_vector)
-          #layer_2 = tf.map_fn(lambda x: tf.squeeze(tf.tanh(tf.matmul(tf.reshape(x, [-1, thought_size]), W2) + b2)), layer_1)
+          layer_2 = tf.map_fn(lambda x: tf.squeeze(tf.tanh(tf.matmul(tf.reshape(x, [-1, thought_size]), W2) + b2)), layer_1)
 
           # Re-split the question thought vector to create the decoder state
-          layers = tf.split(1, num_layers, layer_1)
+          layers = tf.split(1, num_layers, layer_2)
 
           for layer in layers:
               c, h = tf.split(1, 2, layer)

@@ -387,9 +387,9 @@ class Chatbot:
         """
 
         # Fetch embedding variables from model
-        with tf.variable_scope("custom_rnn_seq2seq/RNN/EmbeddingWrapper", reuse=True):
+        with tf.variable_scope("thought_encoder/RNN/EmbeddingWrapper", reuse=True):
             em_in = tf.get_variable("embedding")
-        with tf.variable_scope("embedding_rnn_decoder", reuse=True):
+        with tf.variable_scope("thought_decoder", reuse=True):
             em_out = tf.get_variable("embedding")
 
         # Disable training for embeddings

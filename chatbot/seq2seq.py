@@ -82,30 +82,32 @@ def thought_mapper(encoder_state, thoughtmap_layers=1, thoughtmap_layer_size=102
           thought_vector = []
           decoder_initial_state = []
           num_layers = len(encoder_state)
-          hidden_size = encoder_state[0].c.get_shape()[1].value
-          thought_size = num_layers * hidden_size * 2
+          hidden_size = encoder_state[0].get_shape()[1].value
+          thought_size = num_layers * hidden_size
 
           # Collect all internal states vector and flatten a single thought vector t with size numLayers * hiddenSize
           for i in range (len(encoder_state)):
               state = encoder_state[i]
-              thought_vector.append(tf.concat(1, [state.c, state.h]))
+              thought_vector.append(state)
           thought_vector = tf.concat(1, thought_vector)
 
           # Add a hidden layer to map between the question thought to answer thought
           W1 = tf.get_variable("W1", [thought_size, thought_size])
           W2 = tf.get_variable("W2", [thought_size, thought_size])
+          W3 = tf.get_variable("W3", [thought_size, thought_size])
           b1 = tf.get_variable("b1", [thought_size])
           b2 = tf.get_variable("b2", [thought_size])
+          b3 = tf.get_variable("b3", [thought_size])
 
-          layer_1 = tf.map_fn(lambda x: tf.squeeze(tf.tanh(tf.matmul(tf.reshape(x, [-1, thought_size]), W1) + b1)), thought_vector)
-          layer_2 = tf.map_fn(lambda x: tf.squeeze(tf.tanh(tf.matmul(tf.reshape(x, [-1, thought_size]), W2) + b2)), layer_1)
+          layer_1 = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thought_size]), W1) + b1)), thought_vector)
+          layer_2 = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thought_size]), W2) + b2)), layer_1)
+          layer_3 = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thought_size]), W3) + b3)), layer_2)
 
           # Re-split the question thought vector to create the decoder state
-          layers = tf.split(1, num_layers, layer_2)
+          layers = tf.split(1, num_layers, layer_3)
 
           for layer in layers:
-              c, h = tf.split(1, 2, layer)
-              decoder_initial_state.append(tf.nn.rnn_cell.LSTMStateTuple(c,h))
+              decoder_initial_state.append(layer)
 
           return decoder_initial_state
 

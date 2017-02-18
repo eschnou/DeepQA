@@ -70,7 +70,7 @@ def custom_rnn_seq2seq(encoder_inputs,
 
     return tf.nn.seq2seq.rnn_decoder(emb_inp, decoder_initial_state, cell, loop_function=loop_function)
 
-def thought_mapper(encoder_state, thoughtmap_layers=1, thoughtmap_layer_size=1024):
+def thought_mapper(encoder_state, thoughtmap_layers=2, thoughtmap_layer_size=4096):
       """The following is an intermediate layer whose role is to map a question 'thought'
          to an answer thought. In the future, this layer can also use additional inputs
          for example to take into account the context of the question, or to access something
@@ -91,23 +91,27 @@ def thought_mapper(encoder_state, thoughtmap_layers=1, thoughtmap_layer_size=102
               thought_vector.append(state)
           thought_vector = tf.concat(1, thought_vector)
 
-          # Add a hidden layer to map between the question thought to answer thought
-          W1 = tf.get_variable("W1", [thought_size, thought_size])
-          W2 = tf.get_variable("W2", [thought_size, thought_size])
-          W3 = tf.get_variable("W3", [thought_size, thought_size])
-          b1 = tf.get_variable("b1", [thought_size])
-          b2 = tf.get_variable("b2", [thought_size])
-          b3 = tf.get_variable("b3", [thought_size])
+          # A first layer to map between the encoded thought vector to the thought mapper
+          TM_W_in = tf.get_variable("TM_W_in", [thought_size, thoughtmap_layer_size])
+          TM_b_in = tf.get_variable("TM_b_in", [thoughtmap_layer_size])
+          layer = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thought_size]), TM_W_in) + TM_b_in)), thought_vector)
 
-          layer_1 = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thought_size]), W1) + b1)), thought_vector)
-          layer_2 = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thought_size]), W2) + b2)), layer_1)
-          layer_3 = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thought_size]), W3) + b3)), layer_2)
+          # Add hidden layers in thought mapper
+          for i in range(thoughtmap_layers):
+              W = tf.get_variable("TM_W_%d" % i, [thoughtmap_layer_size, thoughtmap_layer_size])
+              b = tf.get_variable("TM_b_%d" % i, [thoughtmap_layer_size])
+              layer = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thoughtmap_layer_size]), W) + b)), layer)
+
+          # Add the output layer feeding the encoded thought to the decoder
+          TM_W_out = tf.get_variable("TM_W_out", [thoughtmap_layer_size, thought_size])
+          TM_b_out = tf.get_variable("TM_b_out", [thought_size])
+          layer = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thoughtmap_layer_size]), TM_W_out) + TM_b_out)), layer)
 
           # Re-split the question thought vector to create the decoder state
-          layers = tf.split(1, num_layers, layer_3)
+          layers = tf.split(1, num_layers, layer)
 
-          for layer in layers:
-              decoder_initial_state.append(layer)
+          for l in layers:
+              decoder_initial_state.append(l)
 
           return decoder_initial_state
 

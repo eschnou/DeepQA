@@ -16,6 +16,8 @@
 import tensorflow as tf
 import numpy as np
 
+from tensorflow.contrib.legacy_seq2seq.python.ops import seq2seq
+
 def custom_rnn_seq2seq(encoder_inputs,
                        decoder_inputs,
                        cell,
@@ -36,15 +38,15 @@ def custom_rnn_seq2seq(encoder_inputs,
     else:
       dtype = scope.dtype
 
-    encoder_cell = tf.nn.rnn_cell.EmbeddingWrapper(
+    encoder_cell = tf.contrib.rnn.EmbeddingWrapper(
         cell, embedding_classes=num_encoder_symbols,
         embedding_size=embedding_size)
 
     # encoder_state is a list of state for each hidden layer
-    _, encoder_state = tf.nn.rnn(encoder_cell, encoder_inputs, dtype=dtype)
+    _, encoder_state = tf.contrib.rnn.static_rnn(encoder_cell, encoder_inputs, dtype=dtype)
 
     if output_projection is None:
-      cell = tf.nn.rnn_cell.OutputProjectionWrapper(cell, num_decoder_symbols)
+      cell = tf.contrib.rnn.OutputProjectionWrapper(cell, num_decoder_symbols)
 
   # Insert a thought map between encoder and decoder
   decoder_initial_state = thought_mapper(encoder_state) if thought_map else encoder_state
@@ -61,16 +63,16 @@ def custom_rnn_seq2seq(encoder_inputs,
 
     embedding = tf.get_variable("embedding", [num_decoder_symbols, embedding_size])
 
-    loop_function = tf.nn.seq2seq._extract_argmax_and_embed(
+    loop_function = seq2seq._extract_argmax_and_embed(
         embedding, output_projection,
         update_embedding=False) if feed_previous else None
 
     emb_inp = (
-        tf.nn.embedding_ops.embedding_lookup(embedding, i) for i in decoder_inputs)
+        tf.nn.embedding_lookup(embedding, i) for i in decoder_inputs)
 
-    return tf.nn.seq2seq.rnn_decoder(emb_inp, decoder_initial_state, cell, loop_function=loop_function)
+    return seq2seq.rnn_decoder(emb_inp, decoder_initial_state, cell, loop_function=loop_function)
 
-def thought_mapper(encoder_state, thoughtmap_layers=2, thoughtmap_layer_size=4096):
+def thought_mapper(encoder_state, thoughtmap_layers=2, thoughtmap_layer_size=1024):
       """The following is an intermediate layer whose role is to map a question 'thought'
          to an answer thought. In the future, this layer can also use additional inputs
          for example to take into account the context of the question, or to access something
@@ -89,7 +91,7 @@ def thought_mapper(encoder_state, thoughtmap_layers=2, thoughtmap_layer_size=409
           for i in range (len(encoder_state)):
               state = encoder_state[i]
               thought_vector.append(state)
-          thought_vector = tf.concat(1, thought_vector)
+          thought_vector = tf.concat(thought_vector, 1)
 
           # A first layer to map between the encoded thought vector to the thought mapper
           TM_W_in = tf.get_variable("TM_W_in", [thought_size, thoughtmap_layer_size])
@@ -108,7 +110,7 @@ def thought_mapper(encoder_state, thoughtmap_layers=2, thoughtmap_layer_size=409
           layer = tf.map_fn(lambda x: tf.squeeze(tf.nn.relu(tf.matmul(tf.reshape(x, [-1, thoughtmap_layer_size]), TM_W_out) + TM_b_out)), layer)
 
           # Re-split the question thought vector to create the decoder state
-          layers = tf.split(1, num_layers, layer)
+          layers = tf.split(layer, num_layers, 1)
 
           for l in layers:
               decoder_initial_state.append(l)

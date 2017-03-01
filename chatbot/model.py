@@ -119,7 +119,7 @@ class Model:
                 dtype=self.dtype
             )
 
-            def sampledSoftmax(inputs, labels):
+            def sampledSoftmax(labels, inputs):
                 labels = tf.reshape(labels, [-1, 1])  # Add one dimension (nb of true classes, here 1)
 
                 # We need to compute the sampled_softmax_loss using 32bit floats to
@@ -132,8 +132,8 @@ class Model:
                     tf.nn.sampled_softmax_loss(
                         localWt,  # Should have shape [num_classes, dim]
                         localB,
-                        localInputs,
                         labels,
+                        localInputs,
                         self.args.softmaxSamples,  # The number of classes to randomly sample per batch
                         self.textData.getVocabularySize()),  # The number of classes
                     self.dtype)
@@ -141,7 +141,7 @@ class Model:
         # Creation of the rnn cell
         encoDecoCell = tf.contrib.rnn.BasicLSTMCell(self.args.hiddenSize, state_is_tuple=True)  # Or GRUCell, LSTMCell(args.hiddenSize)
         if not self.args.test:  # TODO: Should use a placeholder instead
-            encoDecoCell = tf.contrib.rnn.DropoutWrapper(encoDecoCell, input_keep_prob=1.0, output_keep_prob=0.5)  # TODO: Custom values
+            encoDecoCell = tf.contrib.rnn.DropoutWrapper(encoDecoCell, input_keep_prob=1.0, output_keep_prob=self.args.dropout)
         encoDecoCell = tf.contrib.rnn.MultiRNNCell([encoDecoCell] * self.args.numLayers, state_is_tuple=True)
 
         # Network input (placeholders)

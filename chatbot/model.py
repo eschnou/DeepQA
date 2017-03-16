@@ -110,33 +110,25 @@ class Model:
         # TODO: Use buckets (better perfs)
 
         # Parameters of sampled softmax (needed for attention mechanism and a large vocabulary size)
-        outputProjection = None
+        output_projection = None
         # Sampled softmax only makes sense if we sample less than vocabulary size.
-        if 0 < self.args.softmaxSamples < self.textData.getVocabularySize():
-            outputProjection = ProjectionOp(
-                (self.args.hiddenSize, self.textData.getVocabularySize()),
-                scope='softmax_projection',
-                dtype=self.dtype
-            )
+        if self.args.softmaxSamples > 0 and self.args.softmaxSamples < self.textData.getVocabularySize():
+          w_t = tf.get_variable("proj_w", [self.textData.getVocabularySize(), self.args.hiddenSize], dtype=tf.float32)
+          w = tf.transpose(w_t)
+          b = tf.get_variable("proj_b", [self.textData.getVocabularySize()], dtype=tf.float32)
+          output_projection = (w, b)
 
-            def sampledSoftmax(labels, inputs):
-                labels = tf.reshape(labels, [-1, 1])  # Add one dimension (nb of true classes, here 1)
-
-                # We need to compute the sampled_softmax_loss using 32bit floats to
-                # avoid numerical instabilities.
-                localWt     = tf.cast(tf.transpose(outputProjection.W), tf.float32)
-                localB      = tf.cast(outputProjection.b,               tf.float32)
-                localInputs = tf.cast(inputs,                           tf.float32)
-
-                return tf.cast(
-                    tf.nn.sampled_softmax_loss(
-                        localWt,  # Should have shape [num_classes, dim]
-                        localB,
-                        labels,
-                        localInputs,
-                        self.args.softmaxSamples,  # The number of classes to randomly sample per batch
-                        self.textData.getVocabularySize()),  # The number of classes
-                    self.dtype)
+          def sampledSoftmax(labels, inputs):
+            labels = tf.reshape(labels, [-1, 1])
+            # We need to compute the sampled_softmax_loss using 32bit floats to
+            # avoid numerical instabilities.
+            local_w_t = tf.cast(w_t, tf.float32)
+            local_b = tf.cast(b, tf.float32)
+            local_inputs = tf.cast(inputs, tf.float32)
+            return tf.cast(
+                tf.nn.sampled_softmax_loss(local_w_t, local_b, labels, local_inputs,
+                                           self.args.softmaxSamples, self.textData.getVocabularySize()),
+                tf.float32)
 
         # Creation of the rnn cell
         pkeep = 1.0 if self.args.test else self.args.dropout
@@ -164,7 +156,7 @@ class Model:
             self.textData.getVocabularySize(),
             self.textData.getVocabularySize(),  # Both encoder and decoder have the same number of class
             embedding_size=self.args.embeddingSize,  # Dimension of each word
-            output_projection=outputProjection.getWeights() if outputProjection else None,
+            output_projection=output_projection,
             feed_previous=bool(self.args.test)  # When we test (self.args.test), we use previous output as next input (feed_previous)
         )
 
@@ -173,10 +165,10 @@ class Model:
 
         # For testing only
         if self.args.test:
-            if not outputProjection:
+            if not output_projection:
                 self.outputs = decoderOutputs
             else:
-                self.outputs = [outputProjection(output) for output in decoderOutputs]
+                self.outputs = [tf.matmul(output, output_projection[0]) + output_projection[1] for output in decoderOutputs]
 
             # TODO: Attach a summary to visualize the output
 
@@ -188,7 +180,7 @@ class Model:
                 self.decoderTargets,
                 self.decoderWeights,
                 self.textData.getVocabularySize(),
-                softmax_loss_function= sampledSoftmax if outputProjection else None  # If None, use default SoftMax
+                softmax_loss_function= sampledSoftmax if output_projection else None  # If None, use default SoftMax
             )
             tf.summary.scalar('loss', self.lossFct)  # Keep track of the cost
 

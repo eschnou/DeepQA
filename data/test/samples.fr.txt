@@ -1,0 +1,322 @@
+Salut
+Salut!
+Êtes-vous conscient?
+Comment allez-vous?
+Comment vous appelez-vous ?
+Es-tu vivant ?
+Luke, je suis ton père!
+Vous ne pouvez pas passer!
+Je vais te tuer!
+Es-tu prêt ?
+Quand êtes-vous prêts?
+De quelle couleur est le ciel?
+Quel âge avez-vous ?
+Pouvez-vous dire 'Bonjour'?
+Pouvez-vous dire "frites"?
+Pouvez-vous dire bonjour?
+Pouvez-vous dire des frites?
+Peux-tu dire oui?
+Pouvez-vous dire non?
+Cette phrase est-elle fausse?
+How do you say Bonjour en Anglais?
+Parle anglais.
+Bonjour.
+Bonjour ?
+Bonjour le monde!
+Netflix et le froid?
+Bonne nuit.
+Ça va ?
+Google me recrutera-t-il?
+Dites-moi l'alphabet?
+Dites-moi l'alphabet, s'il vous plaît?
+Quelle est la première lettre de l'alphabet?
+Qu'est-ce qu'une lettre de l'alphabet?
+Comment va John?
+Comment va Oliver?
+Comment va Laura?
+Comment va Jenny?
+Qui est Jean?
+Qui est Oliver?
+Qui est Laura?
+Qui est Jenny?
+Qui est votre maître?
+Donnez-moi!
+Donnez moi votre avis.
+Bonjour
+Bonjour ?
+Salut ?
+Au Revoir
+Au Revoir!
+Au revoir john.
+S'il vous plaît
+S'il vous plaît.
+S'il vous plaît!
+Comment ?
+Pourquoi ?
+Pourquoi pas ?
+Quelle !?
+Quelle ?!!
+Oh!
+Vraiment ?
+Oui.
+Oui ?
+Non!
+Non.
+Quel est ?
+Comment est ?
+Peut tu ?
+Êtes-vous sûr?
+Y a-t-il?
+Vas-tu ?
+Combien de temps ?
+Combien ?
+Combien ?
+Quel âge ?
+Es tu ?
+Quels sont?
+Où se trouve ?
+Qui ?
+Qui a ?
+Qui a ?
+Où ?
+Quand ?
+Lequel ?
+Laquelle ?
+Le quoi ?
+Dites «table».
+Dites «table».
+Dites «table»!
+Dites «table»!
+Dites "table"
+Dites «table»
+Say table
+Dites table!
+Je t'aime.
+Je t'aime aussi.
+Non, c'est John
+Anna l'a fait.
+Tu es un menteur!
+Tu es un menteur.
+agréable
+agréable.
+Agréable!
+Je vis à Nice.
+Tellement grossier!
+...
+?
+!
+.
+Pouvez-vous décrire votre meilleur souvenir?
+Quel est votre meilleur souvenir?
+Quel est ton pire souvenir?
+Qu'est-ce que la cuisine?
+Qu'est-ce que le sommeil?
+Qui aimes-tu ?
+Qui détestez-vous?
+Je m'appelle Etienne.
+Qu'est-ce que ça veut dire ?
+Que signifie feu?
+Que signifie l'amour?
+Que signifie table?
+Que signifie l'imagination?
+Prouve le
+Prouve le.
+Prouve le!
+Que pensez-vous des portes de bill?
+Que se passe-t-il si les machines peuvent réfléchir?
+Quel est le plus grand roman écrit?
+Avez-vous blessé quelqu'un?
+Avez-vous une copine?
+As tu un petit ami?
+1992
+1992.
+1992!
+1992?
+1994
+1994.
+1994!
+1994?
+2000
+2000.
+2001
+2001.
+2001!
+2011
+2011.
+Ce qui se produit ?
+Que s'est-il passé en 1992?
+Que s'est-il passé en 2001?
+Quand était-ce ?
+20 juillet.
+Deux plus deux
+2 + 2?
+Où es-tu ?
+Où es tu maintenant ?
+Quel est ton nom ?
+Quand es-tu né ?
+Quelle année
+Quelle année.
+Quelle année!
+Quelle année?
+Quelle année
+Quelle année?
+Quelle année est-il?
+Quelle heure est-il ?
+Quelle couleur ?
+Quelle couleur ?
+Quelle heure ?
+RIEN.
+Salut John!
+Êtes-vous un homme ou une femme ?
+Vous êtes une femme ou un homme ?
+Pourquoi sommes nous ici ?
+À plus tard.
+À plus tard...
+À plus tard ?
+Mon nom est David. Quel est mon nom ?
+Mon nom est John. Quel est mon nom ?
+Êtes-vous un leader ou un adepte?
+Je suis un leader.
+Je suis un adepte.
+je te deteste
+Qui est skywalker?
+Qui est le mec?
+Quelle est ta couleur préférée ?
+Quelle est ta couleur favorite ?
+Quel est ton plat préféré ?
+Quel est votre plat préféré ?
+Qui est Bill Gates?
+Qui est Bill Clinton?
+Que pensez-vous de Trump?
+Que pensez-vous de l'avertissement global?
+Est-ce que la lune atterrit un canular?
+Le ciel est-il bleu ou noir?
+Un chat a-t-il une queue?
+Est un escargot plus vite qu'un cheval?
+Est un cheval plus rapide qu'un escargot?
+Un chat a-t-il une aile?
+Un chat peut-il voler?
+Un chat peut-il marcher?
+Un chat peut-il nager?
+Un poisson peut-il voler?
+Un poisson peut-il marcher?
+Un poisson peut-il nager?
+Un oiseau peut-il voler?
+Un oiseau peut-il marcher?
+Un oiseau peut-il nager?
+Dis-moi quelque chose
+Dis-moi quelque chose.
+Dis-moi quelque chose!
+Raconte moi une histoire
+Dites-moi une histoire, s'il vous plaît.
+Il était une fois...
+Combien coûte deux plus deux?
+Préférez-vous la nourriture bleue ou verte?
+Préférez-vous le football ou le football?
+De quoi avez-vous besoin pour jouer au soccer?
+De quoi avez-vous besoin pour jouer au handball?
+un deux trois
+un deux trois
+1 2 3
+1
+1 2
+1 2 3 ...
+1 2 3?
+A, B, C
+A, B, C, ...
+A b c
+1, 2, 3
+Et ?
+Continuer...
+Et ... action!
+Action!
+Laissez le film commencer
+Laissez le film commencer!
+Tu es viré!
+Feu
+Feu!
+Feu à volonté
+Feu à volonté!
+Entrant.
+Entrant!
+Entrant !!
+Combien de jambes un humain a-t-il?
+Combien de jambes un homme a-t-il?
+Combien de jambes une femme a-t-elle?
+Combien de jambes un chat a-t-il?
+Combien de jambes possède une araignée?
+Combien de jambes a un centipede ont?
+Quelle est la couleur du ciel?
+Quelle est la couleur de l'eau?
+Quelle est la couleur du sang?
+Quelle est la couleur d'une feuille?
+Quelle est la couleur habituelle d'une feuille?
+Quelle est la couleur d'une voiture jaune?
+Combien coûte deux plus deux?
+Combien coûte dix moins deux?
+Quel est le but de la vie ?
+Quel est le but de la vie?
+Quel est le but de l'existence?
+Où es tu maintenant ?
+Linux est-il meilleur que Windows?
+Windows est-il mieux que Linux?
+Quel est le but d'être intelligent?
+Quel est le but des émotions?
+Qu'est-ce que la morale?
+Qu'est-ce qui est immoral?
+Qu'est-ce que la morale?
+Qu'est-ce que l'altruisme?
+Quelle est la définition de la morale?
+Quelle est la définition de l'immoralité?
+Quelle est la définition de la morale?
+Quelle est la définition de l'altruisme?
+Quelle est la définition de cool?
+Crois-tu en Dieu ?
+Ok ... alors quelle est la définition de la morale?
+Dites-moi la définition de la morale, je suis assez bouleversé maintenant!
+Regardez, j'ai besoin d'aide, j'ai besoin de savoir plus sur la moralité ...
+Sérieusement, qu'est-ce que la morale?
+Pourquoi la vie n'a rien à voir avec la morale?
+quel est votre travail ?
+Ok, j'ai besoin de savoir comment dois-je me comporter moralement ...
+La morale et l'éthique sont-elles les mêmes?
+Quelles sont les choses que je fais pour être immoral?
+Donnez-moi quelques exemples d'actions morales ...
+Bien, la morale?
+Qu'est-ce que l'intégrité?
+Le libre arbitre est-il une illusion?
+Qu'est-ce que le libre arbitre?
+Être moral!
+J'aime beaucoup notre discussion sur la morale et l'éthique ...
+De quoi aimes-tu parler ?
+De quoi aimerais-tu parler ?
+Que pensez-vous de tesla?
+Que pensez-vous des portes de bill?
+Que pensez-vous de messi?
+Que pensez-vous de cleopatra?
+Que pensez-vous de l'Angleterre?
+Que pensez-vous de l'Angleterre pendant le règne d'Elizabeth?
+Que faire ?
+Quel est l'endroit le plus profond du monde?
+Aimez-vous la cuisine mexicaine ou la nourriture indienne?
+De qui êtes-vous fou?
+Un homme
+Une femme
+Un chien
+Une table
+Une fleur
+Un homme.
+Une femme.
+Un chien.
+Une table.
+Une fleur.
+Un
+Deux
+Trois
+Quatre
+Cinq
+La fin
+Oui, ça l'est.
+Oui c'était.
+Effectivement.
+Plus
